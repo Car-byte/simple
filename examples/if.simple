@@ -1,0 +1,17 @@
+func main() {
+    var a: i32 = 10;
+    var b: i32 = 0;
+    var c: i32 = compare(a, b);
+}
+
+func compare(a: i32, b: i32) -> i32 {
+    var retVal: i32 = 0;
+    if (a != b) {
+        retVal = 1;
+    }
+    else {
+        retVal = 0;
+    }
+
+    return retVal;
+}

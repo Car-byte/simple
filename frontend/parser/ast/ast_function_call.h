@@ -19,6 +19,14 @@ public:
 
     virtual llvm::Value* codeGen(CodeGenerator& codeGenerator) override;
 
+    std::string getIdentifier() const {
+        return identifier;
+    }
+
+    std::vector<std::shared_ptr<AstNode>> getArgs() {
+        return args;
+    }
+
 private:
     std::string identifier;
     std::vector<std::shared_ptr<AstNode>> args;

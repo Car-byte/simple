@@ -14,6 +14,8 @@
 #include "../frontend/parser/ast/ast_literal_int32.h"
 #include "../frontend/parser/ast/ast_var_declaration.h"
 #include "../frontend/parser/ast/ast_variable.h"
+#include "../frontend/parser/ast/ast_function_return.h"
+#include "../frontend/parser/ast/ast_if_else.h"
 
 #include "../frontend/parser/types/type_void.h"
 #include "../frontend/parser/types/type_float32.h"
@@ -43,6 +45,8 @@ public:
     llvm::Value* codeGen(AstLiteralFloat32& node);
     llvm::Value* codeGen(AstVarDeclaration& node);
     llvm::Value* codeGen(AstVariable& node);
+    llvm::Value* codeGen(AstFunctionReturn& node);
+    llvm::Value* codeGen(AstIfElse& node);
 
     llvm::Type* codeGen(TypeInt32& type);
     llvm::Type* codeGen(TypeFloat32& type);

@@ -14,6 +14,8 @@
 #include "../frontend/parser/ast/ast_literal_int32.h"
 #include "../frontend/parser/ast/ast_var_declaration.h"
 #include "../frontend/parser/ast/ast_variable.h"
+#include "../frontend/parser/ast/ast_function_return.h"
+#include "../frontend/parser/ast/ast_if_else.h"
 
 #include "../frontend/parser/types/type_void.h"
 #include "../frontend/parser/types/type_float32.h"
@@ -82,12 +84,8 @@ void CodeGenerator::codeGenFunc(const std::shared_ptr<AstFunction>& funcPtr) {
     if (func->getReturnType()->isVoidTy()) {
         builder.CreateRetVoid();
     }
-    else {
-        assert(returnedValue);
-        builder.CreateRet(returnedValue);
-    }
 
-    bool isError = llvm::verifyFunction(*func);
+    bool isError = llvm::verifyFunction(*func, &llvm::outs());
     assert(!isError);
 }
 
@@ -169,13 +167,38 @@ llvm::Value* CodeGenerator::codeGen(AstBinaryOp& node) {
             return builder.CreateAdd(lhs, rhs);
         case OperatorType::Sub:
             return builder.CreateSub(lhs, rhs);
+        case OperatorType::LogicalEqual:
+            return builder.CreateICmpEQ(lhs, rhs);
+        case OperatorType::NotLogicalEqual:
+            return builder.CreateICmpNE(lhs, rhs);
+        case OperatorType::Lesser:
+            return builder.CreateICmpSLT(lhs, rhs);
+        case OperatorType::LesserEqual:
+            return builder.CreateICmpSLE(lhs, rhs);
+        case OperatorType::Greater:
+            return builder.CreateICmpSGT(lhs, rhs);
+        case OperatorType::GreaterEqual:
+            return builder.CreateICmpSGE(lhs, rhs);
         default:
             assert(false && "unsupported binary op");
     }
 }
 
 llvm::Value* CodeGenerator::codeGen(AstFunctionCall& node) {
-    assert(false && "Function calls unsupported rn");
+    llvm::Function* func = module.getFunction(node.getIdentifier());
+    assert(func && "unknown function");
+    llvm::FunctionType* funcType = func->getFunctionType();
+    assert(node.getArgs().size() == funcType->getNumParams());
+    std::vector<llvm::Value*> args;
+
+    for (int i = 0; i < node.getArgs().size(); i++) {
+        llvm::Value* arg = node.getArgs()[i]->codeGen(*this);
+        llvm::Type* paramType = funcType->getParamType(i);
+        llvm::Value* bitCastArgVal = builder.CreateBitCast(arg, paramType);
+        args.push_back(bitCastArgVal);
+    }
+
+    return builder.CreateCall(func, args);
 }
 
 llvm::Value* CodeGenerator::codeGen(AstFunction& node) {
@@ -211,6 +234,60 @@ llvm::Value* CodeGenerator::codeGen(AstVariable& node) {
     return builder.CreateLoad(var->getAllocatedType(), var);
 }
 
+llvm::Value* CodeGenerator::codeGen(AstFunctionReturn& node) {
+    llvm::Value* returnVal = node.getReturnVal()->codeGen(*this);
+    builder.CreateRet(returnVal);
+    return returnVal;
+}
+
+llvm::Value* CodeGenerator::codeGen(AstIfElse& ifElseNode) {
+    llvm::Value* condVal = ifElseNode.getIfCond()->codeGen(*this);
+    llvm::Function* parentFunc = builder.GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* ifBlock = llvm::BasicBlock::Create(context, "ifBlock", parentFunc);
+    llvm::BasicBlock* elseBlock = llvm::BasicBlock::Create(context, "elseBlock");
+    llvm::BasicBlock* mergeBlock = llvm::BasicBlock::Create(context, "ifcont");
+
+    builder.CreateCondBr(condVal, ifBlock, elseBlock);
+    builder.SetInsertPoint(ifBlock);
+
+    llvm::Value* ifVal = nullptr;
+    for (const auto& node: ifElseNode.getIfBody()) {
+        ifVal = node->codeGen(*this);
+    }
+
+    assert(ifVal);
+
+    ifBlock = builder.GetInsertBlock();
+    builder.CreateBr(mergeBlock);
+
+    parentFunc->getBasicBlockList().push_back(elseBlock);
+    builder.SetInsertPoint(elseBlock);
+
+    llvm::Value* elseVal = nullptr;
+    for (const auto& node: ifElseNode.getElseBody()) {
+        elseVal = node->codeGen(*this);
+    }
+    assert(elseVal);
+
+    elseBlock = builder.GetInsertBlock();
+    builder.CreateBr(mergeBlock);
+
+    parentFunc->getBasicBlockList().push_back(mergeBlock);
+    builder.SetInsertPoint(mergeBlock);
+
+    if (ifVal->getType() == llvm::Type::getVoidTy(context) ||
+        elseVal->getType() == llvm::Type::getVoidTy(context) ||
+        (ifVal->getType() != elseVal->getType())) {
+        return llvm::Constant::getNullValue(llvm::Type::getInt32Ty(context));
+    }
+
+    llvm::PHINode* phiNode = builder.CreatePHI(ifVal->getType(), 2, "iftmp");
+    phiNode->addIncoming(ifVal, ifBlock);
+    phiNode->addIncoming(elseVal, elseBlock);
+
+    return phiNode;
+}
 
 llvm::Type* CodeGenerator::codeGen(TypeInt32& type) {
     return llvm::Type::getInt32Ty(context);

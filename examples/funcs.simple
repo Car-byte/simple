@@ -1,7 +1,8 @@
 func main() {
-    var a: i32 = test();
+    var a: i32 = 20;
+    var b: i32 = add(3, a + 8);
 }
 
-func test() -> i32 {
-    return 5;
+func add(c: i32, d: i32) -> i32 {
+    return c + d;
 }

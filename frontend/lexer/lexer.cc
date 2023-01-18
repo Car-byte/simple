@@ -30,9 +30,50 @@ std::shared_ptr<Token> Lexer::getNextToken() {
         case '+':
             return std::make_shared<OperatorToken>(OperatorType::Add, std::string(1, src.advance()));
         case '-':
-            return std::make_shared<OperatorToken>(OperatorType::Sub, std::string(1, src.advance()));
+            src.advance();
+
+            if (src.peek() == '>') {
+                src.advance();
+                return std::make_shared<PunctuatorToken>(PunctuatorType::Arrow, "->");
+            }
+
+            return std::make_shared<OperatorToken>(OperatorType::Sub, "-");
         case '=':
-            return std::make_shared<PunctuatorToken>(PunctuatorType::Equal, std::string(1, src.advance()));
+            src.advance();
+
+            if (src.peek() == '=') {
+                src.advance();
+                return std::make_shared<OperatorToken>(OperatorType::LogicalEqual, "==");
+            }
+
+            return std::make_shared<PunctuatorToken>(PunctuatorType::Equal, "=");
+        case '>':
+            src.advance();
+
+            if (src.peek() == '=') {
+                src.advance();
+                return std::make_shared<OperatorToken>(OperatorType::GreaterEqual, ">=");
+            }
+
+            return std::make_shared<OperatorToken>(OperatorType::Greater, ">");
+        case '<':
+            src.advance();
+
+            if (src.peek() == '=') {
+                src.advance();
+                return std::make_shared<OperatorToken>(OperatorType::LesserEqual, "<=");
+            }
+
+            return std::make_shared<OperatorToken>(OperatorType::Lesser, "<");
+        case '!':
+            src.advance();
+
+            if (src.peek() == '=') {
+                src.advance();
+                return std::make_shared<OperatorToken>(OperatorType::NotLogicalEqual, "!=");
+            }
+
+            assert(false && "unidentified token: !");
         case ';':
             return std::make_shared<PunctuatorToken>(PunctuatorType::SemiColon, std::string(1, src.advance()));
         case ':':

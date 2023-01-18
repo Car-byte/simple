@@ -19,6 +19,8 @@
 #include "./ast/ast_variable.h"
 #include "./ast/ast_literal_int32.h"
 #include "./ast/ast_literal_float32.h"
+#include "./ast/ast_function_return.h"
+#include "./ast/ast_if_else.h"
 
 Program Parser::parse() {
     std::vector<std::shared_ptr<AstFunction>> functions;
@@ -60,8 +62,17 @@ std::shared_ptr<AstFunction> Parser::parseFunction() {
 
     auto params = parseFunctionParams();
 
-    // TO-DO: parse return type
-    auto returnType = typeFactory.getType("void");
+    // default return type is void if not specified
+    std::string typeStr = "void";
+
+    if (tokenWindow.isNextPunctuator(PunctuatorType::Arrow)) {
+        tokenWindow.advancePunctuator(PunctuatorType::Arrow);
+
+        typeStr = tokenWindow.peek()->getRawVal();
+        tokenWindow.advanceIdentifier();
+    }
+
+    std::shared_ptr<Type> returnType = typeFactory.getType(typeStr);
 
     auto funcBody = parseBody();
 
@@ -114,6 +125,12 @@ std::vector<std::shared_ptr<AstNode>> Parser::parseBody() {
         }
         else if (tokenWindow.isNextIdentifier()) {
             body.push_back(parseVarAssignmentOrFuncCall());
+        }
+        else if (tokenWindow.isNextKeyword(KeywordType::If)) {
+            body.push_back(parseIfElse());
+        }
+        else if (tokenWindow.isNextKeyword(KeywordType::Return)) {
+            body.push_back(parseReturn());
         }
         else {
             assert(false && "unknown token in top level of body");
@@ -270,4 +287,40 @@ std::shared_ptr<AstNode> Parser::parseFunctionCall(const std::string& identifier
 
 std::shared_ptr<AstNode> Parser::parseVariable(const std::string& identifier) {
     return std::make_shared<AstVariable>(identifier);
+}
+
+std::shared_ptr<AstNode> Parser::parseReturn() {
+    tokenWindow.advanceKeyword(KeywordType::Return);
+
+    auto returnVal = parseExpression();
+
+    tokenWindow.advancePunctuator(PunctuatorType::SemiColon);
+
+    return std::make_shared<AstFunctionReturn>(returnVal);
+}
+
+std::shared_ptr<AstNode> Parser::parseIfElse() {
+    tokenWindow.advanceKeyword(KeywordType::If);
+
+    auto ifCond = parseIfCond();
+    auto ifBody = parseBody();
+
+    std::vector<std::shared_ptr<AstNode>> elseBody;
+
+    if (tokenWindow.isNextKeyword(KeywordType::Else)) {
+        tokenWindow.advanceKeyword(KeywordType::Else);
+        elseBody = parseBody();
+    }
+
+    return std::make_shared<AstIfElse>(ifCond, ifBody, elseBody);
+}
+
+std::shared_ptr<AstNode> Parser::parseIfCond() {
+    tokenWindow.advancePunctuator(PunctuatorType::OpenParenthesis);
+
+    std::shared_ptr<AstNode> ifCond = parseExpression();
+
+    tokenWindow.advancePunctuator(PunctuatorType::CloseParenthesis);
+
+    return ifCond;
 }

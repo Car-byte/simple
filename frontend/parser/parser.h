@@ -40,6 +40,9 @@ private:
     std::shared_ptr<AstNode> parseParenthesesExpression();
     std::shared_ptr<AstNode> parseFunctionCall(const std::string& identifier);
     std::shared_ptr<AstNode> parseVariable(const std::string& identifier);
+    std::shared_ptr<AstNode> parseReturn();
+    std::shared_ptr<AstNode> parseIfElse();
+    std::shared_ptr<AstNode> parseIfCond();
 };
 
 

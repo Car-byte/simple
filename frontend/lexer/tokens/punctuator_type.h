@@ -10,6 +10,7 @@ enum class PunctuatorType {
     Colon,
     SemiColon,
     Equal,
+    Arrow,
 };
 
 #endif //SIMPLE_PUNCTUATOR_TYPE_H

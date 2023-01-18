@@ -16,11 +16,18 @@ public:
         return operatorType;
     }
 
-    int getOperatorPrecedents() {
+    int getOperatorPrecedents() const {
         switch (getOperatorType()) {
+            case OperatorType::LogicalEqual:
+            case OperatorType::NotLogicalEqual:
+            case OperatorType::Greater:
+            case OperatorType::GreaterEqual:
+            case OperatorType::Lesser:
+            case OperatorType::LesserEqual:
+                return 20;
             case OperatorType::Add:
             case OperatorType::Sub:
-                return 10;
+                return 50;
         }
     }
 

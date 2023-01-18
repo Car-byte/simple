@@ -7,6 +7,8 @@
 #include "ast_binary_op.h"
 #include "ast_assignment.h"
 #include "ast_variable.h"
+#include "ast_function_return.h"
+#include "ast_if_else.h"
 
 #include "../../../backend/code_generator.h"
 
@@ -40,5 +42,13 @@ llvm::Value* AstVarDeclaration::codeGen(CodeGenerator& codeGenerator) {
 }
 
 llvm::Value* AstVariable::codeGen(CodeGenerator& codeGenerator) {
+    return codeGenerator.codeGen(*this);
+}
+
+llvm::Value* AstFunctionReturn::codeGen(CodeGenerator& codeGenerator) {
+    return codeGenerator.codeGen(*this);
+}
+
+llvm::Value* AstIfElse::codeGen(CodeGenerator& codeGenerator) {
     return codeGenerator.codeGen(*this);
 }
