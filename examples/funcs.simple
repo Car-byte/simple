@@ -1,0 +1,7 @@
+func main() {
+    var a: i32 = test();
+}
+
+func test() -> i32 {
+    return 5;
+}
